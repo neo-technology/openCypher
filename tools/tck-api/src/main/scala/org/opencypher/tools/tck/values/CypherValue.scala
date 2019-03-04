@@ -27,22 +27,14 @@
  */
 package org.opencypher.tools.tck.values
 
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
-import org.opencypher.tools.tck.parsing.generated.{FeatureResultsLexer, FeatureResultsParser}
+import java.time.format.DateTimeFormatter
 
 import scala.util.hashing.MurmurHash3
 
 object CypherValue {
-
   def apply(s: String, orderedLists: Boolean = true): CypherValue = {
-    val stream = CharStreams.fromString(s)
-    val tokenStream = new FeatureResultsLexer(stream)
-    val tokens = new CommonTokenStream(tokenStream)
-    val parser = new FeatureResultsParser(tokens)
-    val featureResultsContext = parser.value
-    val visitor = CypherValueVisitor(orderedLists)
-    val value = visitor.visit(featureResultsContext)
-    value
+    val parser = new CypherValueParser(orderedLists)
+    parser.parse(s)
   }
 
   implicit val ordering: Ordering[CypherValue] = new Ordering[CypherValue] {
@@ -51,10 +43,14 @@ object CypherValue {
       stringOrdering.compare(x.toString, y.toString)
     }
   }
-
 }
 
 sealed trait CypherValue
+
+object CypherNode {
+  def apply(labels: Set[String], properties: Option[CypherPropertyMap]): CypherNode =
+    CypherNode(labels, properties.getOrElse(CypherPropertyMap.empty))
+}
 
 case class CypherNode(labels: Set[String] = Set.empty, properties: CypherPropertyMap = CypherPropertyMap())
   extends CypherValue {
@@ -64,6 +60,11 @@ case class CypherNode(labels: Set[String] = Set.empty, properties: CypherPropert
     val props = if (properties.properties.isEmpty) "" else properties.toString
     Seq(lbls, props).filter(_.nonEmpty).mkString("(", " ", ")")
   }
+}
+
+object CypherRelationship {
+  def apply(relType: String, properties: Option[CypherPropertyMap]): CypherRelationship =
+    CypherRelationship(relType, properties.getOrElse(CypherPropertyMap.empty))
 }
 
 case class CypherRelationship(relType: String, properties: CypherPropertyMap = CypherPropertyMap()) extends CypherValue {
@@ -89,6 +90,10 @@ case class CypherBoolean(value: Boolean) extends CypherValue {
 
 case class CypherProperty(key: String, value: CypherValue) extends CypherValue {
   override def toString: String = s"$key: $value"
+}
+
+object CypherPropertyMap {
+  val empty = CypherPropertyMap()
 }
 
 case class CypherPropertyMap(properties: Map[String, CypherValue] = Map.empty)
@@ -148,10 +153,35 @@ trait Connection {
   def r: CypherRelationship
 }
 
+object Connection {
+  def forward(t: (CypherRelationship, CypherNode)) = Forward(t._1, t._2)
+  def backward(t: (CypherRelationship, CypherNode)) = Backward(t._1, t._2)
+}
+
 case class Forward(r: CypherRelationship, n: CypherNode) extends Connection {
   override def toString: String = s"-$r->$n"
 }
 
 case class Backward(r: CypherRelationship, n: CypherNode) extends Connection {
   override def toString: String = s"<-$r-$n"
+}
+
+case class CypherDate(value: java.time.LocalDate) extends CypherValue {
+  override def toString: String = s"${value.format(DateTimeFormatter.ISO_DATE)}"
+}
+
+case class CypherLocalTime(value: java.time.LocalTime) extends CypherValue {
+  override def toString: String = s"${value.format(DateTimeFormatter.ISO_LOCAL_TIME)}"
+}
+
+case class CypherLocalDateTime(value: java.time.LocalDateTime) extends CypherValue {
+  override def toString: String = s"${value.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)}"
+}
+
+case class CypherTime(value: java.time.OffsetTime) extends CypherValue {
+  override def toString: String = s"${value.format(DateTimeFormatter.ISO_OFFSET_TIME)}"
+}
+
+case class CypherDateTime(value: java.time.OffsetDateTime) extends CypherValue {
+  override def toString: String = s"${value.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}"
 }

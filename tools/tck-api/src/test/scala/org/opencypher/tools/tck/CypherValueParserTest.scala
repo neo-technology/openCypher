@@ -27,15 +27,17 @@
  */
 package org.opencypher.tools.tck
 
+import java.time._
+
 import org.opencypher.tools.tck.values._
 import org.scalatest.{FunSuite, Matchers}
 
-class CypherValueVisitorTest extends FunSuite with Matchers {
+class CypherValueParserTest extends FunSuite with Matchers {
 
   test("unlabelled node") {
     val string = "()"
     val parsed = CypherValue(string)
-    val expected = CypherNode(Set.empty, CypherPropertyMap(Map.empty))
+    val expected = CypherNode(Set.empty[String], CypherPropertyMap(Map.empty))
     parsed should equal(expected)
   }
 
@@ -62,6 +64,15 @@ class CypherValueVisitorTest extends FunSuite with Matchers {
     CypherValue("''") should equal(CypherString(""))
     CypherValue("'-1'") should equal(CypherString("-1"))
     CypherValue("null") should equal(CypherNull)
+  }
+
+  test("floats in exponent form") {
+    CypherValue(".4e10") should equal(CypherFloat(.4e10))
+    CypherValue(".4e-10") should equal(CypherFloat(.4e-10))
+    CypherValue("-.4e-10") should equal(CypherFloat(-.4e-10))
+    CypherValue("-1e-10") should equal(CypherFloat(-1e-10))
+    CypherValue("8e10") should equal(CypherFloat(8e10))
+    CypherValue("8.12312e2") should equal(CypherFloat(8.12312e2))
   }
 
   test("path with a single node") {
@@ -96,11 +107,45 @@ class CypherValueVisitorTest extends FunSuite with Matchers {
 
   test("list") {
     CypherValue("[]") should equal(CypherOrderedList())
+    CypherValue("[1, null, 2]") should equal(
+      CypherOrderedList(List(CypherInteger(1), CypherNull, CypherInteger(2))))
     CypherValue("[1, 2, null]") should equal(
       CypherOrderedList(List(CypherInteger(1), CypherInteger(2), CypherNull)))
     CypherValue("[]", orderedLists = false) should equal(CypherUnorderedList())
+    CypherValue("[2, 1]", orderedLists = false) should equal(CypherUnorderedList(List(CypherInteger(2), CypherInteger(1)).sorted(CypherValue.ordering)))
     CypherValue("[1, 2, null]", orderedLists = false) should equal(
       CypherUnorderedList(List(CypherInteger(1), CypherInteger(2), CypherNull).sorted(CypherValue.ordering)))
+  }
+
+  test("date") {
+    CypherValue("2018-12-23") should equal(CypherDate(LocalDate.of(2018, 12, 23)))
+    CypherValue("0002-01-21") should equal(CypherDate(LocalDate.of(2, 1, 21)))
+  }
+
+  test("localtime") {
+    CypherValue("12:31:14.645876123") should equal(CypherLocalTime(LocalTime.of(12, 31, 14, 645876123)))
+    CypherValue("12:31:14.0") should equal(CypherLocalTime(LocalTime.of(12, 31, 14, 0)))
+    CypherValue("12:31:14") should equal(CypherLocalTime(LocalTime.of(12, 31, 14)))
+    CypherValue("09:00:59") should equal(CypherLocalTime(LocalTime.of(9, 0, 59)))
+  }
+
+  test("localdatetime") {
+    CypherValue("1984-10-11T12:31:14.645876123") should equal(CypherLocalDateTime(LocalDateTime.of(1984, 10, 11, 12, 31, 14, 645876123)))
+    CypherValue("1984-10-11T12:31:14") should equal(CypherLocalDateTime(LocalDateTime.of(1984, 10, 11, 12, 31, 14)))
+    CypherValue("0001-12-11T00:31:14.645876123") should equal(CypherLocalDateTime(LocalDateTime.of(1, 12, 11, 0, 31, 14, 645876123)))
+  }
+
+  test("time") {
+    CypherValue("12:31:14.645876123+01:00") should equal(CypherTime(OffsetTime.of(12, 31, 14, 645876123, ZoneOffset.ofHours(1))))
+    CypherValue("00:00:00+00:00") should equal(CypherTime(OffsetTime.of(0, 0, 0, 0, ZoneOffset.UTC)))
+    CypherValue("00:00:00-08:30") should equal(CypherTime(OffsetTime.of(0, 0, 0, 0, ZoneOffset.ofHoursMinutes(-8, -30))))
+    CypherValue("23:59:59Z") should equal(CypherTime(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC)))
+  }
+
+  test("datetime") {
+    CypherValue("1984-10-11T12:31:14.645876123+01:00") should equal(CypherDateTime(OffsetDateTime.of(1984, 10, 11, 12, 31, 14, 645876123, ZoneOffset.ofHours(1))))
+    CypherValue("0000-01-31T12:31:14-02:00") should equal(CypherDateTime(OffsetDateTime.of(0, 1, 31, 12, 31, 14, 0, ZoneOffset.ofHours(-2))))
+    CypherValue("1234-12-12T00:00:00Z") should equal(CypherDateTime(OffsetDateTime.of(1234, 12, 12, 0, 0, 0, 0, ZoneOffset.UTC)))
   }
 
 }
