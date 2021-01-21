@@ -50,23 +50,14 @@
   <dependencies>
 
     <dependency>
-      <groupId>io.cucumber</groupId>
-      <artifactId>cucumber-scala_${scala.binary.version}</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.cucumber</groupId>
-      <artifactId>cucumber-junit</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>org.antlr</groupId>
-      <artifactId>antlr4-runtime</artifactId>
+      <groupId>org.opencypher</groupId>
+      <artifactId>tck-api_${scala.binary.version}</artifactId>
+      <version>${project.version}</version>
     </dependency>
 
     <!-- Test deps -->
@@ -100,12 +91,6 @@
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_${scala.binary.version}</artifactId>
       <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.opencypher</groupId>
-      <artifactId>tck-api_${scala.binary.version}</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <dependency>
